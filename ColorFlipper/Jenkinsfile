@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE_NAME = 'colorflipper'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/n-pravab/colorFlipper.git'
+            }
+        }
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'DOCKER_USERNAME_CRED_ID', variable: 'DOCKER_USERNAME'),
+                                     password(credentialsId: 'DOCKER_PASSWORD_CRED_ID', variable: 'DOCKER_PASSWORD')]) {
+                        sh '''
+                            docker build -t $DOCKER_USERNAME/$IMAGE_NAME:${BUILD_NUMBER} .
+                            echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
+                            docker push $DOCKER_USERNAME/$IMAGE_NAME:${BUILD_NUMBER}
+                            docker tag $DOCKER_USERNAME/$IMAGE_NAME:${BUILD_NUMBER} $DOCKER_USERNAME/$IMAGE_NAME:latest
+                            docker push $DOCKER_USERNAME/$IMAGE_NAME:latest
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}
